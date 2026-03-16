@@ -156,6 +156,94 @@ export class DragonPayClient {
     };
   }
 
+  /**
+   * Convenience method: accepts raw query/body params (from Express req.query,
+   * URLSearchParams, or a plain Record<string, string>) and verifies + parses
+   * the collection postback in one call.
+   */
+  async handlePostback(
+    params: Record<string, string | string[] | undefined> | URLSearchParams,
+  ): Promise<ProcessedPostback> {
+    const get = (key: string): string | undefined => {
+      if (params instanceof URLSearchParams) return params.get(key) ?? undefined;
+      const val = (params as Record<string, string | string[] | undefined>)[key];
+      return Array.isArray(val) ? val[0] : val;
+    };
+
+    const callback: PostbackParams = {
+      txnid: get('txnid') || '',
+      refno: get('refno') || '',
+      status: get('status') || '',
+      message: get('message') || '',
+      digest: get('digest'),
+      signature: get('signature'),
+      signatures: get('signatures'),
+      merchantid: get('merchantid'),
+      param1: get('param1'),
+      param2: get('param2'),
+      amount: get('amount'),
+      ccy: get('ccy'),
+      procid: get('procid'),
+      settledate: get('settledate'),
+    };
+
+    if (!callback.txnid || !callback.refno || !callback.status) {
+      throw new DragonPayError('Invalid postback: missing txnid, refno, or status');
+    }
+
+    return this.verifyPostback(callback);
+  }
+
+  /**
+   * Convenience method: accepts raw query/body params from a payout postback
+   * and verifies + parses in one call.
+   */
+  handlePayoutPostback(
+    params: Record<string, string | string[] | undefined> | URLSearchParams,
+  ): ProcessedPayoutPostback {
+    const get = (key: string): string | undefined => {
+      if (params instanceof URLSearchParams) return params.get(key) ?? undefined;
+      const val = (params as Record<string, string | string[] | undefined>)[key];
+      return Array.isArray(val) ? val[0] : val;
+    };
+
+    const callback: PayoutPostbackParams = {
+      merchantTxnId: get('merchantTxnId') || get('merchanttxnid') || '',
+      refNo: get('refNo') || get('refno') || '',
+      status: get('status') || '',
+      message: get('message') || '',
+      digest: get('digest'),
+    };
+
+    if (!callback.merchantTxnId || !callback.refNo || !callback.status) {
+      throw new DragonPayError('Invalid payout postback: missing merchantTxnId, refNo, or status');
+    }
+
+    return this.verifyPayoutPostback(callback);
+  }
+
+  /**
+   * Parse return URL params (browser redirect after payment).
+   * NOT authoritative — use handlePostback() for the real status.
+   * This is for UX only (showing "thank you" or "payment failed" pages).
+   */
+  parseReturnParams(
+    params: Record<string, string | string[] | undefined> | URLSearchParams,
+  ): { txnId: string; refNo: string; status: string; message: string } {
+    const get = (key: string): string | undefined => {
+      if (params instanceof URLSearchParams) return params.get(key) ?? undefined;
+      const val = (params as Record<string, string | string[] | undefined>)[key];
+      return Array.isArray(val) ? val[0] : val;
+    };
+
+    return {
+      txnId: get('txnid') || '',
+      refNo: get('refno') || '',
+      status: get('status') || '',
+      message: get('message') || '',
+    };
+  }
+
   // === Payout API ===
 
   async createPayout(txnId: string, input: CreatePayoutInput): Promise<PayoutResult> {

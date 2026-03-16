@@ -70,13 +70,26 @@ export class PaymentsController {
   constructor(private readonly dragonpay: DragonPayService) {}
 
   @Post()
-  async createPayment(@Body() body: { orderId: string; amount: number; email: string }) {
+  async createPayment(@Body() body: {
+    orderId: string;
+    amount: number;
+    email: string;
+    mobileNo?: string;
+    firstName?: string;
+    lastName?: string;
+  }) {
     const txnId = this.dragonpay.generateTxnId();
     return this.dragonpay.createPayment(txnId, {
       amount: body.amount,
       description: `Order ${body.orderId}`,
       email: body.email,
       procId: 'GCSH',
+      mobileNo: body.mobileNo,
+      billingDetails: {
+        firstName: body.firstName,
+        lastName: body.lastName,
+        email: body.email,
+      },
     });
   }
 

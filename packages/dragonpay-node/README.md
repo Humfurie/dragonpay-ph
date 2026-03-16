@@ -94,6 +94,21 @@ const payment = await client.createPayment(txnId, {
   param1: 'custom-data',    // optional — returned in postback
   param2: 'more-data',      // optional — returned in postback
   expiry: '2026-03-17T00:00:00', // optional
+  mobileNo: '09171234567',  // optional
+  ipAddress: '127.0.0.1',   // optional, recommended
+  userAgent: 'Mozilla/5.0', // optional
+  billingDetails: {          // optional
+    firstName: 'Juan',
+    lastName: 'Cruz',
+    address1: '123 Rizal St',
+    address2: 'Unit 4B',
+    city: 'Makati',
+    state: 'Metro Manila',
+    country: 'PH',
+    zipCode: '1200',
+    telNo: '09171234567',
+    email: 'juan@example.com',
+  },
 });
 
 // payment.url    → redirect customer here
@@ -131,12 +146,25 @@ Requires `payoutPassword` and `payoutUrl` in configuration. The payout password 
 ```typescript
 const payout = await client.createPayout('PAYOUT-001', {
   firstName: 'Juan',
+  middleName: 'Santos',       // optional
   lastName: 'Cruz',
   amount: 500,
   description: 'Withdrawal',
   email: 'juan@example.com',
-  procId: 'BOG',           // bank payout
-  procDetail: '1234567890', // account number
+  procId: 'BOG',              // bank payout
+  procDetail: '1234567890',   // account number
+  runDate: '2026-03-16',      // optional, defaults to today
+  mobileNo: '09171234567',    // optional
+  birthDate: '1990-01-15',    // optional
+  nationality: 'Filipino',    // optional
+  address: {                   // optional
+    street1: '123 Rizal St',
+    street2: 'Unit 4B',
+    barangay: 'San Lorenzo',
+    city: 'Makati',
+    province: 'Metro Manila',
+    country: 'PH',
+  },
 });
 
 const status = await client.getPayoutStatus('PAYOUT-001');

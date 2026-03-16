@@ -30,7 +30,20 @@ const payment = await client.createPayment(txnId, {
   amount: 1500,
   description: 'Premium subscription',
   email: 'juan@example.com',
-  procId: 'GCSH', // GCash
+  procId: 'GCSH',              // optional — locks to GCash
+  mobileNo: '09171234567',     // optional
+  billingDetails: {             // optional
+    firstName: 'Juan',
+    lastName: 'Cruz',
+    address1: '123 Rizal St',
+    address2: 'Unit 4B',
+    city: 'Makati',
+    state: 'Metro Manila',
+    country: 'PH',
+    zipCode: '1200',
+    telNo: '09171234567',
+    email: 'juan@example.com',
+  },
 });
 
 // Redirect the customer to payment.url

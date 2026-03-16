@@ -125,7 +125,7 @@ describe('DragonPayClient — payout', () => {
     });
 
     await expect(
-      client.createPayout({
+      client.createPayout('PAYOUT-001', {
         firstName: 'Juan', lastName: 'Cruz', amount: 100,
         description: 'Test', email: 'x@y.com', procId: 'BOG', procDetail: '123',
       }),
@@ -145,7 +145,7 @@ describe('DragonPayClient — payout', () => {
       json: async () => ({ Code: 0, Message: 'PREF-1' }),
     });
 
-    const result = await client.createPayout({
+    const result = await client.createPayout('PAYOUT-001', {
       firstName: 'Juan', lastName: 'Cruz', amount: 500,
       description: 'Payout', email: 'j@x.com', procId: 'BOG', procDetail: '123',
     });

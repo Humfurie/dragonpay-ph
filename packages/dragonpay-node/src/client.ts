@@ -126,11 +126,10 @@ export class DragonPayClient {
 
   // === Payout API ===
 
-  async createPayout(input: CreatePayoutInput): Promise<PayoutResult> {
+  async createPayout(txnId: string, input: CreatePayoutInput): Promise<PayoutResult> {
     if (!this.payoutPassword || !this.payoutUrl) {
       throw new DragonPayError('Payout credentials not configured');
     }
-    const txnId = genTxnId();
     return createPayoutFn(txnId, input, this.merchantId, this.payoutPassword, this.payoutUrl);
   }
 

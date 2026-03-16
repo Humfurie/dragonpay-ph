@@ -25,7 +25,8 @@ const client = new DragonPayClient({
   password: process.env.DRAGONPAY_PASSWORD!,
 });
 
-const payment = await client.createPayment('ORDER-001', {
+const txnId = client.generateTxnId();
+const payment = await client.createPayment(txnId, {
   amount: 1500,
   description: 'Premium subscription',
   email: 'juan@example.com',

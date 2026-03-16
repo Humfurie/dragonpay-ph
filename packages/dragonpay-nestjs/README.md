@@ -71,7 +71,8 @@ export class PaymentsController {
 
   @Post()
   async createPayment(@Body() body: { orderId: string; amount: number; email: string }) {
-    return this.dragonpay.createPayment(body.orderId, {
+    const txnId = this.dragonpay.generateTxnId();
+    return this.dragonpay.createPayment(txnId, {
       amount: body.amount,
       description: `Order ${body.orderId}`,
       email: body.email,

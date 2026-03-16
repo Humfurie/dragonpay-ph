@@ -36,7 +36,8 @@ const client = new DragonPayClient({
 });
 
 // Create a payment
-const payment = await client.createPayment('ORDER-001', {
+const txnId = client.generateTxnId();
+const payment = await client.createPayment(txnId, {
   amount: 1500,
   description: 'Premium subscription',
   email: 'juan@example.com',
@@ -83,7 +84,8 @@ const client = new DragonPayClient({
 ### Create a Payment
 
 ```typescript
-const payment = await client.createPayment('ORDER-001', {
+const txnId = client.generateTxnId();
+const payment = await client.createPayment(txnId, {
   amount: 1500.00,
   description: 'Premium subscription',
   email: 'juan@example.com',

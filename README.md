@@ -9,7 +9,7 @@ This is a monorepo with two packages:
 | Package | Description | npm |
 |---|---|---|
 | [`dragonpay-ph`](./packages/dragonpay-node) | Core SDK — zero dependencies, dual CJS/ESM | `npm install dragonpay-ph` |
-| [`@dragonpay-ph/nestjs`](./packages/dragonpay-nestjs) | NestJS module wrapper | `npm install dragonpay-ph @dragonpay-ph/nestjs` |
+| [`@humfurie/dragonpay-nestjs`](./packages/dragonpay-nestjs) | NestJS module wrapper | `npm install dragonpay-ph @humfurie/dragonpay-nestjs` |
 
 ## Quick Start
 
@@ -120,7 +120,7 @@ packages/
       demo.ts           # Full working demo
     tests/              # 103 tests across 13 files
 
-  dragonpay-nestjs/     # NestJS wrapper (@dragonpay-ph/nestjs on npm)
+  dragonpay-nestjs/     # NestJS wrapper (@humfurie/dragonpay-nestjs on npm)
     src/
       dragonpay.module.ts    # forRoot / forRootAsync
       dragonpay.service.ts   # Injectable DragonPayClient

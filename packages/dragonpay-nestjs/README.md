@@ -1,11 +1,11 @@
-# @dragonpay-ph/nestjs
+# @humfurie/dragonpay-nestjs
 
 NestJS module for the [dragonpay-ph](../dragonpay-node) SDK. Provides `DragonPayService` as an injectable, fully-configured DragonPay client.
 
 ## Installation
 
 ```bash
-npm install dragonpay-ph @dragonpay-ph/nestjs
+npm install dragonpay-ph @humfurie/dragonpay-nestjs
 ```
 
 ## Quick Start
@@ -14,7 +14,7 @@ npm install dragonpay-ph @dragonpay-ph/nestjs
 
 ```typescript
 import { Module } from '@nestjs/common';
-import { DragonPayModule } from '@dragonpay-ph/nestjs';
+import { DragonPayModule } from '@humfurie/dragonpay-nestjs';
 
 @Module({
   imports: [
@@ -36,7 +36,7 @@ export class AppModule {}
 ```typescript
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DragonPayModule } from '@dragonpay-ph/nestjs';
+import { DragonPayModule } from '@humfurie/dragonpay-nestjs';
 
 @Module({
   imports: [
@@ -63,7 +63,7 @@ Inject `DragonPayService` anywhere in your application. It has the same API as `
 
 ```typescript
 import { Controller, Post, Body, Get, Query } from '@nestjs/common';
-import { DragonPayService } from '@dragonpay-ph/nestjs';
+import { DragonPayService } from '@humfurie/dragonpay-nestjs';
 
 @Controller('payments')
 export class PaymentsController {

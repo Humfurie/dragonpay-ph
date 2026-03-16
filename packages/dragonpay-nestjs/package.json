@@ -1,5 +1,5 @@
 {
-  "name": "@dragonpay-ph/nestjs",
+  "name": "@humfurie/dragonpay-nestjs",
   "version": "0.1.0",
   "description": "NestJS module for dragonpay-ph SDK",
   "type": "module",

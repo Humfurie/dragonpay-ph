@@ -29,6 +29,7 @@ import {
 import { generateTxnId as genTxnId } from './utils';
 import { mapProcessorCode as mapProcCode } from './processors';
 import { DragonPayError } from './errors';
+import { validateTxnId, validatePaymentInput, validatePayoutInput } from './validate';
 
 const KEY_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const DEFAULT_TIMEOUT_MS = 30000;
@@ -81,6 +82,8 @@ export class DragonPayClient {
   // === Collection API ===
 
   async createPayment(txnId: string, input: CreatePaymentInput): Promise<PaymentResult> {
+    validateTxnId(txnId);
+    validatePaymentInput(input);
     return createPayment(txnId, input, this.collectConfig);
   }
 
@@ -156,6 +159,8 @@ export class DragonPayClient {
   // === Payout API ===
 
   async createPayout(txnId: string, input: CreatePayoutInput): Promise<PayoutResult> {
+    validateTxnId(txnId);
+    validatePayoutInput(input);
     if (!this.payoutPassword || !this.payoutUrl) {
       throw new DragonPayError('Payout credentials not configured');
     }

@@ -1,0 +1,41 @@
+export const PROCESSOR_MAP: Record<string, string> = {
+  gcash: 'GCSH',
+  maya: 'PYMY',
+  paymaya: 'PYMY',
+  grabpay: 'GRAB',
+  shopeepay: 'SHPE',
+  bpi: 'BPI',
+  bdo: 'BDO',
+  unionbank: 'UBP',
+  metrobank: 'MBTC',
+  instapay: 'INST',
+  pesonet: 'PESO',
+  '7eleven': '7ELE',
+  bayad: 'BAYD',
+  cebuana: 'CEBL',
+  mlhuillier: 'MLH',
+  ecpay: 'ECPY',
+  credit_card: 'CC',
+  bank_account: 'BOG',
+  bog: 'BOG',
+  bogx: 'BOGX',
+  // ProcId codes map to themselves for pass-through
+  gcsh: 'GCSH',
+  pymy: 'PYMY',
+  grab: 'GRAB',
+  shpe: 'SHPE',
+  ubp: 'UBP',
+  mbtc: 'MBTC',
+  inst: 'INST',
+  peso: 'PESO',
+  '7ele': '7ELE',
+  bayd: 'BAYD',
+  cebl: 'CEBL',
+  mlh: 'MLH',
+  ecpy: 'ECPY',
+  cc: 'CC',
+};
+
+export function mapProcessorCode(code: string): string | undefined {
+  return PROCESSOR_MAP[code.toLowerCase()];
+}

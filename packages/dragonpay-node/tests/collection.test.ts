@@ -79,7 +79,7 @@ describe('createPayment', () => {
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.BillingDetails.FirstName).toBe('Juan');
     expect(body.BillingDetails.LastName).toBe('Cruz');
-    expect(body.BillingDetails.Province).toBe('Metro Manila');
+    expect(body.BillingDetails.State).toBe('Metro Manila');
   });
 
   it('throws DragonPayError on non-OK response', async () => {

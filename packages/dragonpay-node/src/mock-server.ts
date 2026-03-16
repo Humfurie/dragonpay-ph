@@ -78,6 +78,33 @@ export function createMockServer(options: MockServerOptions = {}) {
     }
   }
 
+  async function sendPayoutPostback(txn: MockTransaction): Promise<void> {
+    if (!options.postbackUrl) return;
+
+    const password = options.password || 'test';
+    const digestStr = `${txn.txnId}:${txn.refNo}:${txn.status}:${txn.message}:${password}`;
+    const digest = crypto.createHash('sha1').update(digestStr).digest('hex');
+
+    const params = new URLSearchParams({
+      merchantTxnId: txn.txnId,
+      refNo: txn.refNo,
+      status: txn.status,
+      message: txn.message,
+      digest,
+    });
+
+    try {
+      const resp = await fetch(options.postbackUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+      });
+      console.log(`Payout postback sent to ${options.postbackUrl} -> ${resp.status}`);
+    } catch (err) {
+      console.log(`Payout postback failed: ${err}`);
+    }
+  }
+
   async function readBody(req: http.IncomingMessage): Promise<string> {
     const chunks: Buffer[] = [];
     for await (const chunk of req) {
@@ -219,7 +246,16 @@ export function createMockServer(options: MockServerOptions = {}) {
     if (path === '/' || path === '') {
       const txnList = [...transactions.values()];
       const rows = txnList.length > 0
-        ? txnList.map((t) => `<tr><td>${t.txnId}</td><td>${t.type}</td><td>${t.status}</td><td>${t.amount}</td><td>${t.type === 'collection' ? `<a href="/pay/${t.txnId}">Pay</a>` : '&mdash;'}</td></tr>`).join('')
+        ? txnList.map((t) => {
+          const settled = ['S', 'F', 'V'].includes(t.status);
+          let action = '&mdash;';
+          if (!settled) {
+            action = t.type === 'collection'
+              ? `<a href="/pay/${t.txnId}">Pay</a>`
+              : `<a href="/simulate/${t.txnId}/success">Success</a> | <a href="/simulate/${t.txnId}/failure">Fail</a>`;
+          }
+          return `<tr><td>${t.txnId}</td><td>${t.type}</td><td>${t.status}</td><td>${t.amount}</td><td>${action}</td></tr>`;
+        }).join('')
         : '<tr><td colspan="5">No transactions yet. Use the SDK to create one.</td></tr>';
 
       res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -285,11 +321,18 @@ export function createMockServer(options: MockServerOptions = {}) {
       }
 
       txn.status = outcome === 'success' ? 'S' : 'F';
-      txn.message = outcome === 'success' ? 'Payment successful' : 'Payment failed';
+      txn.message = outcome === 'success'
+        ? (txn.type === 'payout' ? 'Payout successful' : 'Payment successful')
+        : (txn.type === 'payout' ? 'Payout failed' : 'Payment failed');
 
       // Fire postback to merchant's webhook
-      sendPostback(txn);
+      if (txn.type === 'payout') {
+        sendPayoutPostback(txn);
+      } else {
+        sendPostback(txn);
+      }
 
+      const label = txn.type === 'payout' ? 'Payout' : 'Payment';
       const postbackInfo = options.postbackUrl
         ? `<p>Postback sent to <code>${options.postbackUrl}</code></p>`
         : '<p>No postbackUrl configured. Set it in createMockServer options to receive callbacks.</p>';
@@ -299,7 +342,7 @@ export function createMockServer(options: MockServerOptions = {}) {
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family: sans-serif; max-width: 480px; margin: 40px auto; padding: 20px;">
-  <h2>Payment ${outcome === 'success' ? 'Successful' : 'Failed'}</h2>
+  <h2>${label} ${outcome === 'success' ? 'Successful' : 'Failed'}</h2>
   <p>Transaction ${txnId} is now <strong>${txn.status}</strong>.</p>
   ${postbackInfo}
   <p><a href="/">Back to dashboard</a></p>

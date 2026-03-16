@@ -34,6 +34,7 @@ export interface CreatePaymentInput {
   param2?: string;
   /** ISO datetime string for payment expiry */
   expiry?: string;
+  mobileNo?: string;
   ipAddress?: string;
   userAgent?: string;
   billingDetails?: BillingDetails;
@@ -43,8 +44,8 @@ export interface BillingDetails {
   firstName?: string;
   lastName?: string;
   address1?: string;
+  address2?: string;
   city?: string;
-  /** Maps to 'Province' in DragonPay's API */
   state?: string;
   country?: string;
   zipCode?: string;
@@ -101,8 +102,18 @@ export interface ProcessedPostback {
 
 // === Payout API ===
 
+export interface PayoutAddress {
+  street1?: string;
+  street2?: string;
+  barangay?: string;
+  city?: string;
+  province?: string;
+  country?: string;
+}
+
 export interface CreatePayoutInput {
   firstName: string;
+  middleName?: string;
   lastName: string;
   amount: number;
   currency?: string;
@@ -114,6 +125,10 @@ export interface CreatePayoutInput {
   procDetail: string;
   /** ISO date string (YYYY-MM-DD). Defaults to today. */
   runDate?: string;
+  mobileNo?: string;
+  birthDate?: string;
+  nationality?: string;
+  address?: PayoutAddress;
 }
 
 export interface PayoutResult {

@@ -30,6 +30,7 @@ export async function createPayment(
   if (input.param1) payload.Param1 = input.param1;
   if (input.param2) payload.Param2 = input.param2;
   if (input.expiry) payload.Expiry = input.expiry;
+  if (input.mobileNo) payload.MobileNo = input.mobileNo;
   if (input.ipAddress) payload.IpAddress = input.ipAddress;
   if (input.userAgent) payload.UserAgent = input.userAgent;
 
@@ -39,8 +40,9 @@ export async function createPayment(
       ...(bd.firstName && { FirstName: bd.firstName }),
       ...(bd.lastName && { LastName: bd.lastName }),
       ...(bd.address1 && { Address1: bd.address1 }),
+      ...(bd.address2 && { Address2: bd.address2 }),
       ...(bd.city && { City: bd.city }),
-      ...(bd.state && { Province: bd.state }),
+      ...(bd.state && { State: bd.state }),
       ...(bd.country && { Country: bd.country }),
       ...(bd.zipCode && { ZipCode: bd.zipCode }),
       ...(bd.telNo && { TelNo: bd.telNo }),

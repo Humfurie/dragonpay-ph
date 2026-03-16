@@ -19,9 +19,10 @@ export async function createPayout(
 ): Promise<PayoutResult> {
   const url = `${config.payoutUrl}/${config.merchantId}/post`;
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     TxnId: txnId,
     FirstName: input.firstName,
+    MiddleName: input.middleName || '',
     LastName: input.lastName,
     Amount: formatAmount(input.amount),
     Currency: input.currency || 'PHP',
@@ -30,7 +31,22 @@ export async function createPayout(
     ProcDetail: input.procDetail,
     RunDate: input.runDate || new Date().toISOString().slice(0, 10),
     Email: input.email,
+    MobileNo: input.mobileNo || '',
+    BirthDate: input.birthDate || '',
+    Nationality: input.nationality || '',
   };
+
+  if (input.address) {
+    const addr = input.address;
+    payload.Address = {
+      ...(addr.street1 && { Street1: addr.street1 }),
+      ...(addr.street2 && { Street2: addr.street2 }),
+      ...(addr.barangay && { Barangay: addr.barangay }),
+      ...(addr.city && { City: addr.city }),
+      ...(addr.province && { Province: addr.province }),
+      ...(addr.country && { Country: addr.country }),
+    };
+  }
 
   const { data, status } = await safeRequest<Record<string, unknown>>({
     url,

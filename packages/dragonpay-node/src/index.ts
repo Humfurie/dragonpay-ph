@@ -11,6 +11,7 @@ export type {
   PostbackParams,
   ProcessedPostback,
   CreatePayoutInput,
+  PayoutAddress,
   PayoutResult,
   PayoutStatus,
   PayoutPostbackParams,

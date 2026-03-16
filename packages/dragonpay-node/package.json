@@ -27,6 +27,21 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
+  "keywords": [
+    "dragonpay",
+    "payment",
+    "payment-gateway",
+    "philippines",
+    "gcash",
+    "maya",
+    "grabpay",
+    "bpi",
+    "bdo",
+    "payout",
+    "ecommerce",
+    "fintech",
+    "sdk"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },

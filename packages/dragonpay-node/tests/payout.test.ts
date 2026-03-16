@@ -1,8 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createPayout, getPayoutStatus } from '../src/payout';
+import type { PayoutRequestConfig } from '../src/payout';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
+
+const config: PayoutRequestConfig = {
+  merchantId: 'MERCHANT1',
+  payoutPassword: 'payoutSecret',
+  payoutUrl: 'https://gw.dragonpay.ph/api/payout/merchant/v1',
+  timeoutMs: 30000,
+  maxRetries: 0,
+};
 
 describe('createPayout', () => {
   beforeEach(() => {
@@ -12,7 +21,8 @@ describe('createPayout', () => {
   it('sends POST to {payoutUrl}/{merchantId}/post with Bearer auth', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ Code: 0, Message: 'PAYOUT-REF-001' }),
+      status: 200,
+      text: async () => JSON.stringify({ Code: 0, Message: 'PAYOUT-REF-001' }),
     });
 
     const result = await createPayout(
@@ -26,9 +36,7 @@ describe('createPayout', () => {
         procId: 'BOG',
         procDetail: '1234567890',
       },
-      'MERCHANT1',
-      'payoutSecret',
-      'https://gw.dragonpay.ph/api/payout/merchant/v1',
+      config,
     );
 
     const [url, options] = mockFetch.mock.calls[0];
@@ -49,14 +57,15 @@ describe('createPayout', () => {
   it('throws on non-zero Code', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ Code: -1, Message: 'Invalid account' }),
+      status: 200,
+      text: async () => JSON.stringify({ Code: -1, Message: 'Invalid account' }),
     });
 
     await expect(
       createPayout(
         'TXN-P-002',
         { firstName: 'A', lastName: 'B', amount: 100, description: 'Fail', email: 'x@y.com', procId: 'BOG', procDetail: '999' },
-        'MERCHANT1', 'payoutSecret', 'https://gw.dragonpay.ph/api/payout/merchant/v1',
+        config,
       ),
     ).rejects.toThrow('Invalid account');
   });
@@ -70,12 +79,11 @@ describe('getPayoutStatus', () => {
   it('sends GET to {payoutUrl}/{merchantId}/{txnId}', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ RefNo: 'PREF-1', Status: 'S', Message: 'Completed' }),
+      status: 200,
+      text: async () => JSON.stringify({ RefNo: 'PREF-1', Status: 'S', Message: 'Completed' }),
     });
 
-    const result = await getPayoutStatus(
-      'TXN-P-001', 'MERCHANT1', 'payoutSecret', 'https://gw.dragonpay.ph/api/payout/merchant/v1',
-    );
+    const result = await getPayoutStatus('TXN-P-001', config);
 
     const [url] = mockFetch.mock.calls[0];
     expect(url).toBe('https://gw.dragonpay.ph/api/payout/merchant/v1/MERCHANT1/TXN-P-001');

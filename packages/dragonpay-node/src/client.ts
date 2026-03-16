@@ -14,9 +14,11 @@ import type {
   Processor,
   DragonPayStatus,
 } from './types';
-import { COLLECT_URL_PRODUCTION, PAYOUT_URL_PRODUCTION } from './types';
+import { COLLECT_URL_PRODUCTION } from './types';
 import { createPayment, getTransactionStatus, cancelTransaction, getAvailableProcessors } from './collection';
+import type { CollectRequestConfig } from './collection';
 import { createPayout as createPayoutFn, getPayoutStatus as getPayoutStatusFn } from './payout';
+import type { PayoutRequestConfig } from './payout';
 import {
   verifySha1Digest,
   verifyHmacSha256,
@@ -29,6 +31,8 @@ import { mapProcessorCode as mapProcCode } from './processors';
 import { DragonPayError } from './errors';
 
 const KEY_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const DEFAULT_TIMEOUT_MS = 30000;
+const DEFAULT_MAX_RETRIES = 2;
 
 export class DragonPayClient {
   private readonly merchantId: string;
@@ -37,6 +41,8 @@ export class DragonPayClient {
   private readonly payoutPassword?: string;
   private readonly payoutUrl?: string;
   private readonly skipVerification: boolean;
+  private readonly timeoutMs: number;
+  private readonly maxRetries: number;
 
   private cachedKeys: DragonPayPublicKey[] = [];
   private keysCachedAt = 0;
@@ -48,24 +54,46 @@ export class DragonPayClient {
     this.payoutPassword = config.payoutPassword;
     this.payoutUrl = config.payoutUrl;
     this.skipVerification = config.skipVerification || false;
+    this.timeoutMs = config.timeoutMs || DEFAULT_TIMEOUT_MS;
+    this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
+  }
+
+  private get collectConfig(): CollectRequestConfig {
+    return {
+      merchantId: this.merchantId,
+      password: this.password,
+      baseUrl: this.collectUrl,
+      timeoutMs: this.timeoutMs,
+      maxRetries: this.maxRetries,
+    };
+  }
+
+  private get payoutConfig(): PayoutRequestConfig {
+    return {
+      merchantId: this.merchantId,
+      payoutPassword: this.payoutPassword!,
+      payoutUrl: this.payoutUrl!,
+      timeoutMs: this.timeoutMs,
+      maxRetries: this.maxRetries,
+    };
   }
 
   // === Collection API ===
 
   async createPayment(txnId: string, input: CreatePaymentInput): Promise<PaymentResult> {
-    return createPayment(txnId, input, this.merchantId, this.password, this.collectUrl);
+    return createPayment(txnId, input, this.collectConfig);
   }
 
   async getTransactionStatus(txnId: string): Promise<TransactionStatus> {
-    return getTransactionStatus(txnId, this.merchantId, this.password, this.collectUrl);
+    return getTransactionStatus(txnId, this.collectConfig);
   }
 
   async cancelTransaction(txnId: string): Promise<{ status: string; message: string }> {
-    return cancelTransaction(txnId, this.merchantId, this.password, this.collectUrl);
+    return cancelTransaction(txnId, this.collectConfig);
   }
 
   async getAvailableProcessors(amount: number): Promise<Processor[]> {
-    return getAvailableProcessors(amount, this.merchantId, this.password, this.collectUrl);
+    return getAvailableProcessors(amount, this.collectConfig);
   }
 
   // === Callback Verification ===
@@ -79,7 +107,6 @@ export class DragonPayClient {
       const keys = await this.getPublicKeys();
       verified = verifyRsaSha256(callback, keys);
       if (!verified) {
-        // Key rotation: refresh and retry
         const freshKeys = await this.getPublicKeys(true);
         verified = verifyRsaSha256(callback, freshKeys);
       }
@@ -108,7 +135,9 @@ export class DragonPayClient {
     if (!forceRefresh && this.cachedKeys.length > 0 && now - this.keysCachedAt < KEY_CACHE_TTL_MS) {
       return this.cachedKeys;
     }
-    this.cachedKeys = await fetchPublicKeys(this.collectUrl, this.merchantId, this.password);
+    this.cachedKeys = await fetchPublicKeys(
+      this.collectUrl, this.merchantId, this.password, this.timeoutMs, this.maxRetries,
+    );
     this.keysCachedAt = Date.now();
     return this.cachedKeys;
   }
@@ -130,14 +159,14 @@ export class DragonPayClient {
     if (!this.payoutPassword || !this.payoutUrl) {
       throw new DragonPayError('Payout credentials not configured');
     }
-    return createPayoutFn(txnId, input, this.merchantId, this.payoutPassword, this.payoutUrl);
+    return createPayoutFn(txnId, input, this.payoutConfig);
   }
 
   async getPayoutStatus(txnId: string): Promise<PayoutStatus> {
     if (!this.payoutPassword || !this.payoutUrl) {
       throw new DragonPayError('Payout credentials not configured');
     }
-    return getPayoutStatusFn(txnId, this.merchantId, this.payoutPassword, this.payoutUrl);
+    return getPayoutStatusFn(txnId, this.payoutConfig);
   }
 
   // === Utilities ===

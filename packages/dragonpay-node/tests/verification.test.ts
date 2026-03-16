@@ -211,7 +211,8 @@ describe('fetchPublicKeys', () => {
     const mockKeys = [{ value: 'abc123', status: 'Active' }];
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockKeys,
+      status: 200,
+      text: async () => JSON.stringify(mockKeys),
     });
 
     const keys = await fetchPublicKeys('https://gw.dragonpay.ph/api/collect/v2', 'MERCHANT1', 'secret');

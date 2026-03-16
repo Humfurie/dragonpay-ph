@@ -1,9 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createPayment, getTransactionStatus, cancelTransaction, getAvailableProcessors } from '../src/collection';
+import type { CollectRequestConfig } from '../src/collection';
 
 // Mock global fetch
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
+
+const config: CollectRequestConfig = {
+  merchantId: 'MERCHANT1',
+  password: 'secret123',
+  baseUrl: 'https://gw.dragonpay.ph/api/collect/v2',
+  timeoutMs: 30000,
+  maxRetries: 0, // no retries in unit tests to keep them fast
+};
 
 describe('createPayment', () => {
   beforeEach(() => {
@@ -13,7 +22,8 @@ describe('createPayment', () => {
   it('sends POST to {baseUrl}/{txnid}/post with PascalCase body', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ RefNo: 'REF123', Status: 'S', Message: 'OK', Url: 'https://pay.dragonpay.ph/xyz' }),
+      status: 200,
+      text: async () => JSON.stringify({ RefNo: 'REF123', Status: 'S', Message: 'OK', Url: 'https://pay.dragonpay.ph/xyz' }),
     });
 
     const result = await createPayment(
@@ -24,9 +34,7 @@ describe('createPayment', () => {
         email: 'test@example.com',
         procId: 'GCSH',
       },
-      'MERCHANT1',
-      'secret123',
-      'https://gw.dragonpay.ph/api/collect/v2',
+      config,
     );
 
     expect(mockFetch).toHaveBeenCalledOnce();
@@ -49,7 +57,8 @@ describe('createPayment', () => {
   it('includes billing details with PascalCase keys', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ RefNo: 'REF456', Status: 'S', Message: 'OK', Url: 'https://pay.dragonpay.ph/abc' }),
+      status: 200,
+      text: async () => JSON.stringify({ RefNo: 'REF456', Status: 'S', Message: 'OK', Url: 'https://pay.dragonpay.ph/abc' }),
     });
 
     await createPayment(
@@ -64,9 +73,7 @@ describe('createPayment', () => {
           state: 'Metro Manila',
         },
       },
-      'MERCHANT1',
-      'secret123',
-      'https://gw.dragonpay.ph/api/collect/v2',
+      config,
     );
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -79,11 +86,11 @@ describe('createPayment', () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 401,
-      json: async () => ({ Status: -1, Message: 'Unauthorized' }),
+      text: async () => JSON.stringify({ Status: -1, Message: 'Unauthorized' }),
     });
 
     await expect(
-      createPayment('TXN-003', { amount: 100, description: 'Fail', email: 'x@y.com' }, 'BAD', 'BAD', 'https://gw.dragonpay.ph/api/collect/v2'),
+      createPayment('TXN-003', { amount: 100, description: 'Fail', email: 'x@y.com' }, config),
     ).rejects.toThrow('Unauthorized');
   });
 });
@@ -96,10 +103,11 @@ describe('getTransactionStatus', () => {
   it('sends GET to {baseUrl}/{txnid}', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ RefNo: 'REF100', Status: 'S', Message: 'Completed' }),
+      status: 200,
+      text: async () => JSON.stringify({ RefNo: 'REF100', Status: 'S', Message: 'Completed' }),
     });
 
-    const result = await getTransactionStatus('TXN-100', 'MERCHANT1', 'secret', 'https://gw.dragonpay.ph/api/collect/v2');
+    const result = await getTransactionStatus('TXN-100', config);
 
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toBe('https://gw.dragonpay.ph/api/collect/v2/TXN-100');
@@ -116,10 +124,11 @@ describe('cancelTransaction', () => {
   it('sends GET to {baseUrl}/{txnid}/void', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ Status: 0, Message: 'Voided' }),
+      status: 200,
+      text: async () => JSON.stringify({ Status: 0, Message: 'Voided' }),
     });
 
-    const result = await cancelTransaction('TXN-100', 'MERCHANT1', 'secret', 'https://gw.dragonpay.ph/api/collect/v2');
+    const result = await cancelTransaction('TXN-100', config);
 
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toBe('https://gw.dragonpay.ph/api/collect/v2/TXN-100/void');
@@ -136,12 +145,13 @@ describe('getAvailableProcessors', () => {
   it('sends GET to {baseUrl}/processors with amount filter', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ([
+      status: 200,
+      text: async () => JSON.stringify([
         { ProcId: 'GCSH', ShortName: 'GCash', LongName: 'GCash', Logo: '', Currencies: ['PHP'], MinAmount: 1, MaxAmount: 50000 },
       ]),
     });
 
-    const result = await getAvailableProcessors(100, 'MERCHANT1', 'secret', 'https://gw.dragonpay.ph/api/collect/v2');
+    const result = await getAvailableProcessors(100, config);
 
     const [url] = mockFetch.mock.calls[0];
     expect(url).toBe('https://gw.dragonpay.ph/api/collect/v2/processors/100.00');

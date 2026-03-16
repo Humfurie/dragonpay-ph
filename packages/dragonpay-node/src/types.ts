@@ -13,6 +13,10 @@ export interface DragonPayConfig {
   mock?: boolean;
   /** Skip signature verification (development only) */
   skipVerification?: boolean;
+  /** Request timeout in milliseconds (default: 30000) */
+  timeoutMs?: number;
+  /** Max retries on network errors and 5xx responses (default: 2) */
+  maxRetries?: number;
 }
 
 // === Collection API ===

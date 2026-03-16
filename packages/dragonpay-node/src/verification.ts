@@ -1,6 +1,7 @@
 import * as crypto from 'crypto';
 import type { PostbackParams, PayoutPostbackParams, DragonPayPublicKey } from './types';
 import { getCollectHeaders } from './auth';
+import { safeRequest } from './request';
 
 export function verifySha1Digest(
   callback: Pick<PostbackParams, 'txnid' | 'refno' | 'status' | 'message' | 'digest'>,
@@ -86,15 +87,21 @@ export async function fetchPublicKeys(
   collectBaseUrl: string,
   merchantId: string,
   password: string,
+  timeoutMs = 30000,
+  maxRetries = 2,
 ): Promise<DragonPayPublicKey[]> {
   const keysBaseUrl = collectBaseUrl.replace(/\/v2$/, '/v1');
-  const response = await fetch(`${keysBaseUrl}/keys/callback`, {
+  const { data, status } = await safeRequest<DragonPayPublicKey[]>({
+    url: `${keysBaseUrl}/keys/callback`,
+    method: 'GET',
     headers: getCollectHeaders(merchantId, password),
+    timeoutMs,
+    maxRetries,
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch public keys: HTTP ${response.status}`);
+  if (status >= 400) {
+    throw new Error(`Failed to fetch public keys: HTTP ${status}`);
   }
 
-  return response.json();
+  return data;
 }

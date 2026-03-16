@@ -2,15 +2,22 @@ import type { CreatePaymentInput, PaymentResult, TransactionStatus, Processor } 
 import { getCollectHeaders } from './auth';
 import { DragonPayError } from './errors';
 import { formatAmount } from './utils';
+import { safeRequest } from './request';
+
+export interface CollectRequestConfig {
+  merchantId: string;
+  password: string;
+  baseUrl: string;
+  timeoutMs: number;
+  maxRetries: number;
+}
 
 export async function createPayment(
   txnId: string,
   input: CreatePaymentInput,
-  merchantId: string,
-  password: string,
-  baseUrl: string,
+  config: CollectRequestConfig,
 ): Promise<PaymentResult> {
-  const url = `${baseUrl}/${txnId}/post`;
+  const url = `${config.baseUrl}/${txnId}/post`;
 
   const payload: Record<string, unknown> = {
     Amount: formatAmount(input.amount),
@@ -41,16 +48,17 @@ export async function createPayment(
     };
   }
 
-  const response = await fetch(url, {
+  const { data, status } = await safeRequest<Record<string, string>>({
+    url,
     method: 'POST',
-    headers: getCollectHeaders(merchantId, password),
+    headers: getCollectHeaders(config.merchantId, config.password),
     body: JSON.stringify(payload),
+    timeoutMs: config.timeoutMs,
+    maxRetries: config.maxRetries,
   });
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new DragonPayError(data.Message || `HTTP ${response.status}`, data.Status, data.Message);
+  if (status >= 400) {
+    throw new DragonPayError(data.Message || `HTTP ${status}`, Number(data.Status), data.Message);
   }
 
   return {
@@ -64,44 +72,42 @@ export async function createPayment(
 
 export async function getTransactionStatus(
   txnId: string,
-  merchantId: string,
-  password: string,
-  baseUrl: string,
+  config: CollectRequestConfig,
 ): Promise<TransactionStatus> {
-  const response = await fetch(`${baseUrl}/${txnId}`, {
+  const { data, status } = await safeRequest<Record<string, string>>({
+    url: `${config.baseUrl}/${txnId}`,
     method: 'GET',
-    headers: getCollectHeaders(merchantId, password),
+    headers: getCollectHeaders(config.merchantId, config.password),
+    timeoutMs: config.timeoutMs,
+    maxRetries: config.maxRetries,
   });
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new DragonPayError(data.Message || `HTTP ${response.status}`, data.Status, data.Message);
+  if (status >= 400) {
+    throw new DragonPayError(data.Message || `HTTP ${status}`, Number(data.Status), data.Message);
   }
 
   return {
     txnId,
     refNo: data.RefNo,
-    status: data.Status,
+    status: data.Status as any,
     message: data.Message,
   };
 }
 
 export async function cancelTransaction(
   txnId: string,
-  merchantId: string,
-  password: string,
-  baseUrl: string,
+  config: CollectRequestConfig,
 ): Promise<{ status: string; message: string }> {
-  const response = await fetch(`${baseUrl}/${txnId}/void`, {
+  const { data, status } = await safeRequest<Record<string, string>>({
+    url: `${config.baseUrl}/${txnId}/void`,
     method: 'GET',
-    headers: getCollectHeaders(merchantId, password),
+    headers: getCollectHeaders(config.merchantId, config.password),
+    timeoutMs: config.timeoutMs,
+    maxRetries: config.maxRetries,
   });
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new DragonPayError(data.Message || `HTTP ${response.status}`, data.Status, data.Message);
+  if (status >= 400) {
+    throw new DragonPayError(data.Message || `HTTP ${status}`, Number(data.Status), data.Message);
   }
 
   return { status: data.Status, message: data.Message };
@@ -109,28 +115,28 @@ export async function cancelTransaction(
 
 export async function getAvailableProcessors(
   amount: number,
-  merchantId: string,
-  password: string,
-  baseUrl: string,
+  config: CollectRequestConfig,
 ): Promise<Processor[]> {
-  const response = await fetch(`${baseUrl}/processors/${formatAmount(amount)}`, {
+  const { data, status } = await safeRequest<Record<string, unknown>[]>({
+    url: `${config.baseUrl}/processors/${formatAmount(amount)}`,
     method: 'GET',
-    headers: getCollectHeaders(merchantId, password),
+    headers: getCollectHeaders(config.merchantId, config.password),
+    timeoutMs: config.timeoutMs,
+    maxRetries: config.maxRetries,
   });
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new DragonPayError(data.Message || `HTTP ${response.status}`, data.Status, data.Message);
+  if (status >= 400) {
+    const err = data as unknown as Record<string, string>;
+    throw new DragonPayError(err.Message || `HTTP ${status}`, Number(err.Status), err.Message);
   }
 
-  return data.map((p: Record<string, unknown>) => ({
-    procId: p.ProcId,
-    shortName: p.ShortName,
-    longName: p.LongName,
-    logo: p.Logo,
-    currencies: p.Currencies,
-    minAmount: p.MinAmount,
-    maxAmount: p.MaxAmount,
+  return (data as Record<string, unknown>[]).map((p) => ({
+    procId: p.ProcId as string,
+    shortName: p.ShortName as string,
+    longName: p.LongName as string,
+    logo: p.Logo as string,
+    currencies: p.Currencies as string[],
+    minAmount: p.MinAmount as number,
+    maxAmount: p.MaxAmount as number,
   }));
 }

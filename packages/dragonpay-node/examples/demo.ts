@@ -1,6 +1,6 @@
 import * as http from 'http';
 import { DragonPayClient } from '../src/index';
-import { createMockServer } from '../src/mock-server';
+import { createMockServer } from '../src/mock';
 
 const MOCK_PORT = 4010;
 const WEBHOOK_PORT = 3000;

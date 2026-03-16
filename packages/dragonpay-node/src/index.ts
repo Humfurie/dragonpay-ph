@@ -36,6 +36,3 @@ export { PROCESSOR_MAP, mapProcessorCode } from './processors';
 
 // Utilities
 export { generateTxnId } from './utils';
-
-// Mock server (for local development/testing)
-export { createMockServer } from './mock-server';

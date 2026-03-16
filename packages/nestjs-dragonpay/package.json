@@ -1,0 +1,6 @@
+{
+  "name": "@dragonpay-ph/nestjs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NestJS wrapper for dragonpay-ph (coming soon)"
+}

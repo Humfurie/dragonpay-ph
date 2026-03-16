@@ -18,6 +18,8 @@ interface MockServerOptions {
   merchantId?: string;
   /** Password to accept (default: any) */
   password?: string;
+  /** URL to POST postback callbacks to (e.g., http://localhost:3000/webhook/dragonpay) */
+  postbackUrl?: string;
 }
 
 export function createMockServer(options: MockServerOptions = {}) {
@@ -44,6 +46,36 @@ export function createMockServer(options: MockServerOptions = {}) {
   function json(res: http.ServerResponse, status: number, body: unknown) {
     res.writeHead(status, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(body));
+  }
+
+  async function sendPostback(txn: MockTransaction): Promise<void> {
+    if (!options.postbackUrl) return;
+
+    const password = options.password || 'test';
+    const digestStr = `${txn.txnId}:${txn.refNo}:${txn.status}:${txn.message}:${password}`;
+    const digest = crypto.createHash('sha1').update(digestStr).digest('hex');
+
+    const params = new URLSearchParams({
+      txnid: txn.txnId,
+      refno: txn.refNo,
+      status: txn.status,
+      message: txn.message,
+      digest,
+      amount: txn.amount,
+      ccy: 'PHP',
+      procid: txn.procId || '',
+    });
+
+    try {
+      const resp = await fetch(options.postbackUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+      });
+      console.log(`Postback sent to ${options.postbackUrl} -> ${resp.status}`);
+    } catch (err) {
+      console.log(`Postback failed: ${err}`);
+    }
   }
 
   async function readBody(req: http.IncomingMessage): Promise<string> {
@@ -183,6 +215,35 @@ export function createMockServer(options: MockServerOptions = {}) {
       });
     }
 
+    // === Root / landing page ===
+    if (path === '/' || path === '') {
+      const txnList = [...transactions.values()];
+      const rows = txnList.length > 0
+        ? txnList.map((t) => `<tr><td>${t.txnId}</td><td>${t.type}</td><td>${t.status}</td><td>${t.amount}</td><td>${t.type === 'collection' ? `<a href="/pay/${t.txnId}">Pay</a>` : '&mdash;'}</td></tr>`).join('')
+        : '<tr><td colspan="5">No transactions yet. Use the SDK to create one.</td></tr>';
+
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      return res.end(`<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>DragonPay Mock Server</title></head>
+<body style="font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 20px;">
+  <h2>DragonPay Mock Server</h2>
+  <p>This is a local mock of the DragonPay API for development.</p>
+  <h3>Transactions</h3>
+  <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+    <tr><th>TxnId</th><th>Type</th><th>Status</th><th>Amount</th><th>Action</th></tr>
+    ${rows}
+  </table>
+</body>
+</html>`);
+    }
+
+    // === Ignore favicon ===
+    if (path === '/favicon.ico') {
+      res.writeHead(204);
+      return res.end();
+    }
+
     // === Mock payment page ===
     if (req.method === 'GET' && path.match(/^\/pay\/(.+)$/)) {
       const txnId = path.match(/^\/pay\/(.+)$/)![1];
@@ -195,7 +256,7 @@ export function createMockServer(options: MockServerOptions = {}) {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       return res.end(`<!DOCTYPE html>
 <html>
-<head><title>Mock DragonPay Payment</title></head>
+<head><meta charset="utf-8"><title>Mock DragonPay Payment</title></head>
 <body style="font-family: sans-serif; max-width: 480px; margin: 40px auto; padding: 20px;">
   <h2>Mock DragonPay Payment</h2>
   <p><strong>Transaction:</strong> ${txnId}</p>
@@ -226,13 +287,22 @@ export function createMockServer(options: MockServerOptions = {}) {
       txn.status = outcome === 'success' ? 'S' : 'F';
       txn.message = outcome === 'success' ? 'Payment successful' : 'Payment failed';
 
+      // Fire postback to merchant's webhook
+      sendPostback(txn);
+
+      const postbackInfo = options.postbackUrl
+        ? `<p>Postback sent to <code>${options.postbackUrl}</code></p>`
+        : '<p>No postbackUrl configured. Set it in createMockServer options to receive callbacks.</p>';
+
       res.writeHead(200, { 'Content-Type': 'text/html' });
       return res.end(`<!DOCTYPE html>
 <html>
+<head><meta charset="utf-8"></head>
 <body style="font-family: sans-serif; max-width: 480px; margin: 40px auto; padding: 20px;">
   <h2>Payment ${outcome === 'success' ? 'Successful' : 'Failed'}</h2>
   <p>Transaction ${txnId} is now <strong>${txn.status}</strong>.</p>
-  <p>Your postback endpoint would receive this callback.</p>
+  ${postbackInfo}
+  <p><a href="/">Back to dashboard</a></p>
 </body>
 </html>`);
     }
